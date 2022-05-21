@@ -19,7 +19,7 @@ let package = Package(
     )
   ],
   dependencies: [
-    .package(url: "https://github.com/supabase-community/gotrue-swift", .exactItem("0.0.4")),
+    .package(url: "https://github.com/supabase-community/gotrue-swift", branch: "fix/refresh-token"),
     .package(
       name: "SupabaseStorage", url: "https://github.com/supabase/storage-swift.git", .exact("0.0.2")
     ),

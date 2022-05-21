@@ -69,8 +69,8 @@
         "repositoryURL": "https://github.com/supabase/storage-swift.git",
         "state": {
           "branch": null,
-          "revision": "ecc1b8b860cc67096be241f15d370451ed93f3ae",
-          "version": "0.0.1"
+          "revision": "ebb1ee7370ec0d50bcfb38ce05279e1475aebbf8",
+          "version": "0.0.2"
         }
       },
       {
