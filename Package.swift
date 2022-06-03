@@ -19,24 +19,26 @@ let package = Package(
     )
   ],
   dependencies: [
-    .package(url: "https://github.com/supabase-community/gotrue-swift", branch: "fix/refresh-token"),
-    .package(
-      name: "SupabaseStorage", url: "https://github.com/supabase/storage-swift.git", .exact("0.0.2")
-    ),
-    .package(
-      name: "Realtime", url: "https://github.com/supabase/realtime-swift.git", .exact("0.0.1")),
-    .package(
-      name: "PostgREST", url: "https://github.com/supabase/postgrest-swift", .exact("0.0.2")),
+    .package(url: "https://github.com/supabase-community/gotrue-swift", from: "0.0.4"),
+    .package(url: "https://github.com/supabase/postgrest-swift", from: "0.0.4"),
+    .package(url: "https://github.com/supabase/realtime-swift", from: "0.0.1"),
+    .package(url: "https://github.com/supabase/storage-swift", from: "0.0.2"),
   ],
   targets: [
     .target(
       name: "Supabase",
       dependencies: [
         .product(name: "GoTrue", package: "gotrue-swift"),
-        "SupabaseStorage",
-        "Realtime",
-        "PostgREST",
+        .product(name: "PostgREST", package: "postgrest-swift"),
+        .product(name: "Realtime", package: "realtime-swift"),
+        .product(name: "SupabaseStorage", package: "storage-swift"),
       ]
-    )
+    ),
+    .testTarget(
+      name: "SupabaseTests",
+      dependencies: [
+        "Supabase"
+      ]
+    ),
   ]
 )

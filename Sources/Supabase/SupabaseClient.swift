@@ -4,75 +4,110 @@ import PostgREST
 import Realtime
 import SupabaseStorage
 
-/// The main class for accessing Supabase functionality
-///
-/// Initialize this class using `.init(supabaseURL: String, supabaseKey: String)`
-///
-/// There are four main classes contained by the `Supabase` class.
-/// 1.  `auth`
-/// 2.  `database`
-/// 3.  `realtime`
-/// 4.  `storage`
-/// Each class listed is available under `Supabase.{name}`, eg: `Supabase.auth`
-///
-/// For more usage information read the README.md
+public struct SupabaseClientOptions {
+  /// The Postgres schema which your tables belong to. Must be on the list of exposed schemas in Supabase. Defaults to `public`.
+  public let schema: String
+
+  // Optional headers for initializing the client.
+  public let headers: [String: String]
+
+  public init(schema: String = "public", headers: [String: String] = [:]) {
+    self.schema = schema
+    self.headers = headers
+  }
+}
+
+/// Supabase Client.
 public class SupabaseClient {
-  private var supabaseURL: URL
-  private var supabaseKey: String
-  private var schema: String
-  private var restURL: URL
-  private var realtimeURL: URL
-  private var authURL: URL
-  private var storageURL: URL
-
-  /// Auth client for Supabase.
-  public let auth: GoTrueClient
-
-  /// Storage client for Supabase.
-  public var storage: SupabaseStorageClient {
-    var headers: [String: String] = defaultHeaders
+  internal var supabaseURL: URL
+  internal var supabaseKey: String
+  internal var schema: String
+  internal var restURL: URL
+  internal var realtimeURL: URL
+  internal var authURL: URL
+  internal var storageURL: URL
+  internal var headers: [String: String]
+  internal var authHeaders: [String: String] {
+    var headers = Constants.defaultHeaders
     headers["Authorization"] = "Bearer \(auth.session?.accessToken ?? supabaseKey)"
-    return SupabaseStorageClient(url: storageURL.absoluteString, headers: headers)
+    return headers
   }
 
-  /// Database client for Supabase.
-  public var database: PostgrestClient {
-    var headers: [String: String] = defaultHeaders
-    headers["Authorization"] = "Bearer \(auth.session?.accessToken ?? supabaseKey)"
-    return PostgrestClient(url: restURL.absoluteString, headers: headers, schema: schema)
+  /// Supabase Auth allows you to create and manage user sessions for access to data that is secured by access policies.
+  public let auth: GoTrueClient
+
+  /// Supabase Storage allows you to manage user-generated content, such as photos or videos.
+  public var storage: SupabaseStorageClient {
+    SupabaseStorageClient(url: storageURL.absoluteString, headers: authHeaders)
+  }
+
+  /// Perform a table operation.
+  /// - Parameter table: The table name to operate on.
+  public func from(_ table: String) -> PostgrestQueryBuilder {
+    PostgrestClient(
+      url: restURL.absoluteString, headers: authHeaders, fetch: nil, schema: schema
+    ).from(table)
+  }
+
+  /// Perform a function call.
+  /// - Parameters:
+  ///   - fn: The function name to call.
+  ///   - params: The parameters to pass to the function call.
+  ///   - count: Count algorithm to use to count rows in a table.
+  public func rpc<U: Encodable>(
+    fn: String,
+    params: U,
+    count: CountOption? = nil
+  ) -> PostgrestTransformBuilder {
+    PostgrestClient(
+      url: restURL.absoluteString, headers: authHeaders, fetch: nil, schema: schema
+    ).rpc(fn: fn, params: params, count: count)
+  }
+
+  /// Perform a function call.
+  /// - Parameters:
+  ///   - fn: The function name to call.
+  ///   - count: Count algorithm to use to count rows in a table.
+  public func rpc(fn: String, count: CountOption? = nil) -> PostgrestTransformBuilder {
+    PostgrestClient(
+      url: restURL.absoluteString, headers: authHeaders, fetch: nil, schema: schema
+    ).rpc(fn: fn, count: count)
   }
 
   /// Realtime client for Supabase
   public var realtime: RealtimeClient
 
-  private var defaultHeaders: [String: String]
-
-  /// Init `Supabase` with the provided parameters.
+  /// Create a new client.
   /// - Parameters:
-  ///   - supabaseURL: Unique Supabase project url
-  ///   - supabaseKey: Supabase anonymous API Key
-  ///   - schema: Database schema name, defaults to `public`
-  ///   - autoRefreshToken: Toggles whether `Supabase.auth` automatically refreshes auth tokens. Defaults to `true`
+  ///   - supabaseURL: The unique Supabase URL which is supplied when you create a new project in your project dashboard.
+  ///   - supabaseKey: The unique Supabase Key which is supplied when you create a new project in your project dashboard.
+  ///   - options: Additional options to pass to the internal clients.
   public init(
     supabaseURL: URL,
     supabaseKey: String,
-    schema: String = "public",
-    autoRefreshToken: Bool = true
+    options: SupabaseClientOptions = SupabaseClientOptions()
   ) {
+    precondition(supabaseKey.isEmpty == false, "supabaseKey is required.")
+
     self.supabaseURL = supabaseURL
     self.supabaseKey = supabaseKey
-    self.schema = schema
+    self.schema = options.schema
     restURL = supabaseURL.appendingPathComponent("/rest/v1")
     realtimeURL = supabaseURL.appendingPathComponent("/realtime/v1")
     authURL = supabaseURL.appendingPathComponent("/auth/v1")
     storageURL = supabaseURL.appendingPathComponent("/storage/v1")
 
-    defaultHeaders = ["X-Client-Info": "supabase-swift/0.0.4", "apikey": supabaseKey]
+    headers = options.headers.merging(Constants.defaultHeaders) { _, new in new }
+    headers["apikey"] = supabaseKey
 
     auth = GoTrueClient(
       url: authURL,
-      headers: defaultHeaders
+      headers: headers
     )
-    realtime = RealtimeClient(endPoint: realtimeURL.absoluteString, params: defaultHeaders)
+
+    realtime = RealtimeClient(
+      endPoint: realtimeURL.absoluteString,
+      params: headers
+    )
   }
 }
